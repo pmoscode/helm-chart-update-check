@@ -5,3 +5,9 @@ tasks:
     desc: Builds the binary
     cmds:
       - go build -o hcuc
+
+  changelog:
+    desc: Generate Changelog
+    cmds:
+      - rm -f CHANGELOG.md
+      - git-changelog -o CHANGELOG.md -c conventional -t keepachangelog .
