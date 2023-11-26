@@ -4,132 +4,69 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	chart2 "github.com/pmoscode/helm-chart-update-check/pkg/chart"
-	"gopkg.in/yaml.v3"
+	"github.com/pmoscode/helm-chart-update-check/pkg/dockerhub"
 	"log"
+	"os"
 	"strings"
-	"time"
 )
 
-type ResponseBody struct {
-	Count    int       `json:"count,omitempty"`
-	Next     any       `json:"next,omitempty"`
-	Previous any       `json:"previous,omitempty"`
-	Results  []Results `json:"results,omitempty"`
-}
-
-type Images struct {
-	Architecture string    `json:"architecture,omitempty"`
-	Features     string    `json:"features,omitempty"`
-	Variant      any       `json:"variant,omitempty"`
-	Digest       string    `json:"digest,omitempty"`
-	Os           string    `json:"os,omitempty"`
-	OsFeatures   string    `json:"os_features,omitempty"`
-	OsVersion    any       `json:"os_version,omitempty"`
-	Size         int       `json:"size,omitempty"`
-	Status       string    `json:"status,omitempty"`
-	LastPulled   time.Time `json:"last_pulled,omitempty"`
-	LastPushed   time.Time `json:"last_pushed,omitempty"`
-}
-
-type Results struct {
-	Creator             int       `json:"creator,omitempty"`
-	ID                  int       `json:"id,omitempty"`
-	Images              []Images  `json:"images,omitempty"`
-	LastUpdated         time.Time `json:"last_updated,omitempty"`
-	LastUpdater         int       `json:"last_updater,omitempty"`
-	LastUpdaterUsername string    `json:"last_updater_username,omitempty"`
-	Name                string    `json:"name,omitempty"`
-	Repository          int       `json:"repository,omitempty"`
-	FullSize            int       `json:"full_size,omitempty"`
-	V2                  bool      `json:"v2,omitempty"`
-	TagStatus           string    `json:"tag_status,omitempty"`
-	TagLastPulled       time.Time `json:"tag_last_pulled,omitempty"`
-	TagLastPushed       time.Time `json:"tag_last_pushed,omitempty"`
-	MediaType           string    `json:"media_type,omitempty"`
-	ContentType         string    `json:"content_type,omitempty"`
-	Digest              string    `json:"digest,omitempty"`
-}
-
 func main() {
-	//response, err := http.Get("https://hub.docker.com/v2/repositories/pmoscode/axelor-open-suite/tags")
-	//
-	//if err != nil {
-	//	fmt.Print(err.Error())
-	//	os.Exit(1)
-	//}
-	//
-	//responseData, err := io.ReadAll(response.Body)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//var responseBody = ResponseBody{}
-	//err = json.Unmarshal([]byte(responseData), &responseBody)
-	//if err != nil {
-	//	return
-	//}
-	//
-	//for _, item := range responseBody.Results {
-	//	if item.Name == "latest" {
-	//		continue
-	//	}
-	//	fmt.Println(item.Name)
-	//	v, _ := semver.NewVersion(item.Name)
-	//	fmt.Println(v.Minor())
-	//	fmt.Println(v.Value())
-	//}
+	debugEnv := os.Getenv("HCUC_DEBUG_ENABLED")
+	debugEnabled := debugEnv == "TRUE" || debugEnv == "true"
 
-	chart := chart2.NewChart("/home/peter/Arbeit/GIT/GitHub/Helm-Charts/airsonic-advanced")
+	dockerHubRepositoryEnv, err := getRequiredEnv("HCUC_DOCKERHUB_REPO")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	//version := chart.Version()
-	//fmt.Println("version:")
-	//fmt.Println(version)
+	helmChartPathEnv, err := getRequiredEnv("HCUC_HELM_CHART_PATH")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dockerHub := dockerhub.CreateDockerHub(dockerHubRepositoryEnv, debugEnabled)
+	versions := dockerHub.GetVersions()
+
+	chart := chart2.NewChart(helmChartPathEnv)
 
 	appVersion := strings.Trim(chart.AppVersion(), "\"")
+	fmt.Println("Helm chart AppVersion:")
+	fmt.Println(appVersion)
 
 	v, err := semver.NewVersion(appVersion)
 	if err != nil {
 		log.Fatal("Problem creating semver: ", err)
 	}
 
-	testVersion := "<= 11.0.1"
+	constraint, _ := semver.NewConstraint("<=" + v.String())
 
-	constraint, _ := semver.NewConstraint(testVersion)
+	newerVersions := make([]*semver.Version, 0)
 
-	compare := constraint.Check(v)
-	fmt.Printf("Version %s is %s: %t\n", appVersion, testVersion, compare)
-
-	if compare {
-		fmt.Println(v.IncMinor())
-	} else {
-		fmt.Println("No change needed")
+	for _, item := range versions {
+		if !constraint.Check(item) {
+			newerVersions = append(newerVersions, item)
+		}
 	}
 
-	// Create a modified yaml file
-	//f, err := os.Create("/home/peter/Arbeit/GIT/GitHub/Helm-Charts/airsonic-advanced/Chart.yaml")
-	//if err != nil {
-	//	log.Fatalf("Problem creating file: %v", err)
-	//}
-	//defer f.Close()
-	//yamlEncoder := yaml.NewEncoder(f)
-	//yamlEncoder.SetIndent(2)
-	//yamlEncoder.Encode(dockerCompose.Content[0])
+	if len(newerVersions) > 0 {
+		fmt.Println("Newer versions exists: ")
+		for _, item := range newerVersions {
+			fmt.Println(item)
+		}
+
+		os.Exit(1)
+	}
 }
 
-// Recusive function to find the child node by value that we care about.
-// Probably needs tweaking so use with caution.
-func findChildNode(value string, node *yaml.Node) *yaml.Node {
-	for _, v := range node.Content {
-		// If we found the value we are looking for, return it.
-		fmt.Printf("%+v", v)
-		fmt.Println()
-		if v.Value == value {
-			return v
-		}
-		// Otherwise recursively look more
-		if child := findChildNode(value, v); child != nil {
-			return child
-		}
+func getRequiredEnv(env string) (string, error) {
+	value, exists := os.LookupEnv(env)
+	if !exists {
+		return "", fmt.Errorf("required environment variable '%s' is missing", env)
 	}
-	return nil
+
+	if value == "" {
+		return "", fmt.Errorf("required environment variable '%s' cannot be empty", env)
+	}
+
+	return value, nil
 }
