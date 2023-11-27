@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
 	chart2 "github.com/pmoscode/helm-chart-update-check/pkg/chart"
@@ -10,24 +12,43 @@ import (
 	"strings"
 )
 
+type CliOptions struct {
+	dockerHubRepository  *string
+	helmChartPath        *string
+	failOnExistingUpdate *bool
+	debug                *bool
+}
+
+func getCliOptions() CliOptions {
+	dockerHubRepository := flag.String("docker-hub-repo", "", "DockHub repo to check tag versions")
+	helmChartPath := flag.String("helm-chart-path", ".", "Helm chart to check for updates")
+	failOnExistingUpdate := flag.Bool("fail-on-update", false, "Return exit code 1, if update is available")
+	debug := flag.Bool("debug", false, "Enable debug outputs")
+
+	flag.Parse()
+
+	return CliOptions{
+		dockerHubRepository:  dockerHubRepository,
+		helmChartPath:        helmChartPath,
+		failOnExistingUpdate: failOnExistingUpdate,
+		debug:                debug,
+	}
+}
+
 func main() {
-	debugEnv := os.Getenv("HCUC_DEBUG_ENABLED")
-	debugEnabled := debugEnv == "TRUE" || debugEnv == "true"
+	cliOptions := getCliOptions()
 
-	dockerHubRepositoryEnv, err := getRequiredEnv("HCUC_DOCKERHUB_REPO")
-	if err != nil {
-		log.Fatal(err)
+	if *cliOptions.dockerHubRepository == "" {
+		log.Fatal(errors.New("parameter 'docker-hub-repo' is required"))
+	}
+	if *cliOptions.helmChartPath == "" {
+		log.Fatal(errors.New("parameter 'helm-chart-path' is required"))
 	}
 
-	helmChartPathEnv, err := getRequiredEnv("HCUC_HELM_CHART_PATH")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dockerHub := dockerhub.CreateDockerHub(dockerHubRepositoryEnv, debugEnabled)
+	dockerHub := dockerhub.CreateDockerHub(*cliOptions.dockerHubRepository, *cliOptions.debug)
 	versions := dockerHub.GetVersions()
 
-	chart := chart2.NewChart(helmChartPathEnv)
+	chart := chart2.NewChart(*cliOptions.helmChartPath)
 
 	appVersion := strings.Trim(chart.AppVersion(), "\"")
 	fmt.Println("Helm chart AppVersion:")
@@ -54,19 +75,49 @@ func main() {
 			fmt.Println(item)
 		}
 
-		os.Exit(1)
+		if *cliOptions.failOnExistingUpdate {
+			os.Exit(1)
+		}
 	}
+
+	// Create a modified yaml file
+	//f, err := os.Create("/home/peter/Arbeit/GIT/GitHub/Helm-Charts/airsonic-advanced/Chart.yaml")
+	//if err != nil {
+	//	log.Fatalf("Problem creating file: %v", err)
+	//}
+	//defer f.Close()
+	//yamlEncoder := yaml.NewEncoder(f)
+	//yamlEncoder.SetIndent(2)
+	//yamlEncoder.Encode(dockerCompose.Content[0])
 }
 
-func getRequiredEnv(env string) (string, error) {
-	value, exists := os.LookupEnv(env)
-	if !exists {
-		return "", fmt.Errorf("required environment variable '%s' is missing", env)
-	}
-
-	if value == "" {
-		return "", fmt.Errorf("required environment variable '%s' cannot be empty", env)
-	}
-
-	return value, nil
-}
+// Recusive function to find the child node by value that we care about.
+// Probably needs tweaking so use with caution.
+//func findChildNode(value string, node *yaml.Node) *yaml.Node {
+//	for _, v := range node.Content {
+//		// If we found the value we are looking for, return it.
+//		fmt.Printf("%+v", v)
+//		fmt.Println()
+//		if v.Value == value {
+//			return v
+//		}
+//		// Otherwise recursively look more
+//		if child := findChildNode(value, v); child != nil {
+//			return child
+//		}
+//	}
+//	return nil
+//}
+//
+//func getRequiredEnv(env string) (string, error) {
+//	value, exists := os.LookupEnv(env)
+//	if !exists {
+//		return "", fmt.Errorf("required environment variable '%s' is missing", env)
+//	}
+//
+//	if value == "" {
+//		return "", fmt.Errorf("required environment variable '%s' cannot be empty", env)
+//	}
+//
+//	return value, nil
+//}
