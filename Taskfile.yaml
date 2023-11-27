@@ -10,4 +10,4 @@ tasks:
     desc: Generate Changelog
     cmds:
       - rm -f CHANGELOG.md
-      - git-changelog -o CHANGELOG.md -c conventional -t keepachangelog .
+      - git-changelog -o CHANGELOG.md -c conventional -t keepachangelog --provider github .
