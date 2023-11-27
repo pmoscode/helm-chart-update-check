@@ -46,7 +46,8 @@ func (c *Chart) searchNode(nodeName string) string {
 func NewChart(chartPath string) *Chart {
 	b, err := os.ReadFile(chartPath + "/Chart.yaml")
 	if err != nil {
-		log.Fatalf("Cannot open file: %v", err)
+		log.Printf("Cannot open file: %v\n", err)
+		log.Fatalf("Does path '%s' contain a 'Chart.yaml?", chartPath)
 	}
 
 	chart := &Chart{
