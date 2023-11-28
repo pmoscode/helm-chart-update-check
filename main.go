@@ -72,7 +72,7 @@ func main() {
 	if len(newerVersions) > 0 {
 		fmt.Println("Newer versions exists: ")
 		for _, item := range newerVersions {
-			fmt.Println(item)
+			fmt.Println(item.Original())
 		}
 
 		if *cliOptions.failOnExistingUpdate {

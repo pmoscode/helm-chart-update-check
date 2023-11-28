@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -96,10 +97,11 @@ func (hub *DockerHub) mapToSemver(responseBody *ResponseBody) []*semver.Version 
 	semverData := make([]*semver.Version, 0)
 
 	for _, item := range responseBody.Results {
-		if item.Name == "latest" {
+		if !isVersionApplicable(item.Name) {
 			continue
 		}
-		v, err := semver.StrictNewVersion(item.Name)
+
+		v, err := semver.NewVersion(item.Name)
 		if err != nil {
 			if !errors.Is(err, semver.ErrInvalidSemVer) {
 				fmt.Printf("Version '%s' is not a valid Semver version\n", item.Name)
@@ -118,6 +120,14 @@ func (hub *DockerHub) mapToSemver(responseBody *ResponseBody) []*semver.Version 
 	}
 
 	return semverData
+}
+
+func isVersionApplicable(version string) bool {
+	if version == "latest" || strings.Count(version, ".") < 2 {
+		return false
+	}
+
+	return true
 }
 
 func CreateDockerHub(repository string, debug bool) *DockerHub {
