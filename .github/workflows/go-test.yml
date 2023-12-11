@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  push:
+    paths:
+      - 'pkg/**'
+      - '*.go'
+      - 'go.mod'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        run: task build
+
+      - name: Test with the Go CLI
+        run: task test
