@@ -28,6 +28,15 @@ func TestMapToSemver(t *testing.T) {
 		{
 			Name: "1.2.3-dev",
 		},
+		{
+			Name: "v1.5.0-rc",
+		},
+		{
+			Name: "v1.5.0-rc1",
+		},
+		{
+			Name: "v1.4.3",
+		},
 	}
 
 	allResults := append(skipResults, okResults...)
@@ -36,7 +45,7 @@ func TestMapToSemver(t *testing.T) {
 		Results: allResults,
 	}
 
-	dockerHub := CreateDockerHub("", true)
+	dockerHub := CreateDockerHub("", false)
 	semver := dockerHub.mapToSemver(responseBody)
 
 	lengthResponseBody := len(allResults)
