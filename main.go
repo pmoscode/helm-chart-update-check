@@ -82,16 +82,19 @@ func getChartVersion(cliOptions *CliOptions) *semver.Version {
 }
 
 func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version, cliOptions *CliOptions) (int, error) {
-	constraintStr := fmt.Sprintf("<= %s-0", chartVersion.String())
+	constraintStr := fmt.Sprintf("<= %s-0", chartVersion.IncPatch().String())
 	// See: https://github.com/Masterminds/semver?tab=readme-ov-file#working-with-prerelease-versions
-	constraint, _ := semver.NewConstraint(constraintStr)
+	constraint, err := semver.NewConstraint(constraintStr)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	newerVersions := make([]*semver.Version, 0)
 
 	fmt.Printf("Checking, if some version is > %s\n", chartVersion.String())
 	for _, item := range dockerVersions {
 		if *cliOptions.debug {
-			fmt.Printf("Checking if Helm chart version %v is > DockerHub version %v: ", chartVersion.String(), item.String())
+			fmt.Printf("Checking if Helm chart version %v is > DockerHub version %v: ", chartVersion.Original(), item.Original())
 		}
 		if !constraint.Check(item) {
 			newerVersions = append(newerVersions, item)

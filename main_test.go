@@ -25,7 +25,7 @@ func TestGetDockerVersions(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				w.Write(getTestData())
 			})),
-			expectedResult: []string{"1.2.3", "1.2.3", "1.2.3-pre.1", "1.2.3-dev", "1.5.0-rc", "1.5.0-rc1"},
+			expectedResult: []string{"1.2.3", "1.2.3", "1.2.3-pre.1", "1.2.3-dev", "1.5.0-rc", "1.5.0-rc1", "1.5.0", "1.5.0-nightly.1"},
 		},
 	}
 
@@ -52,7 +52,7 @@ func TestCheckVersion(t *testing.T) {
 	}
 
 	test := Tests{
-		name: "one",
+		name: "complete",
 		server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write(getTestData())
@@ -64,7 +64,7 @@ func TestCheckVersion(t *testing.T) {
 	hub := dockerhub.CreateDockerHubWithUri(test.server.URL, *cliOptions.debug)
 	dockerVersions := hub.GetVersions()
 
-	chartVersion, _ := semver.NewVersion("v1.5.0-rc")
+	chartVersion, _ := semver.NewVersion("v1.5.0")
 
 	_, err := checkVersion(chartVersion, dockerVersions, cliOptions)
 	if err != nil {
@@ -102,6 +102,12 @@ func getTestData() []byte {
 			},
 			{
 				Name: "v1.5.0-rc1",
+			},
+			{
+				Name: "v1.5.0",
+			},
+			{
+				Name: "v1.5.0-nightly.1",
 			},
 		},
 	}

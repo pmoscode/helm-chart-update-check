@@ -8,10 +8,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 <!-- insertion marker -->
 ## Unreleased
 
-<small>[Compare with latest](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.1...HEAD)</small>
+<small>[Compare with latest](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.2...HEAD)</small>
+
+### Bug Fixes
+
+- increase patch version to get correct check ([cb55865](https://github.com/pmoscode/helm-chart-update-check/commit/cb558657a5d805584fabf3f9081acca43ce86794) by Peter Motzko).
+
+<!-- insertion marker -->
+## [v0.1.2](https://github.com/pmoscode/helm-chart-update-check/releases/tag/v0.1.2) - 2023-12-11
+
+<small>[Compare with v0.1.1](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.1...v0.1.2)</small>
 
 ### Features
 
+- add CHANGELOG.md ([f4d3902](https://github.com/pmoscode/helm-chart-update-check/commit/f4d390269f88523db566d64be82b0bfb777d5783) by Peter Motzko).
 - add build and test workflow ([2efe0b1](https://github.com/pmoscode/helm-chart-update-check/commit/2efe0b1e8f42072e07ff49375f7ce611ff21b3fb) by Peter Motzko).
 - add test task and add "go get" to build task ([137f7f5](https://github.com/pmoscode/helm-chart-update-check/commit/137f7f57c6bc2758c911b2ec0791f0aba063f3d6) by Peter Motzko).
 - add tests ([f278e97](https://github.com/pmoscode/helm-chart-update-check/commit/f278e972e512ba5a45876a0490f5f56bab4b3a3a) by Peter Motzko).
@@ -20,7 +30,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - versions with meta information are handled correct now ([e34aad6](https://github.com/pmoscode/helm-chart-update-check/commit/e34aad672fa874bcf03445058812022a1d1df579) by Peter Motzko).
 
-<!-- insertion marker -->
 ## [v0.1.1](https://github.com/pmoscode/helm-chart-update-check/releases/tag/v0.1.1) - 2023-11-28
 
 <small>[Compare with v0.1.0](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.0...v0.1.1)</small>
