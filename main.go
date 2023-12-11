@@ -8,7 +8,6 @@ import (
 	chart2 "github.com/pmoscode/helm-chart-update-check/pkg/chart"
 	"github.com/pmoscode/helm-chart-update-check/pkg/dockerhub"
 	"log"
-	"os"
 	"strings"
 )
 
@@ -19,7 +18,7 @@ type CliOptions struct {
 	debug                *bool
 }
 
-func getCliOptions() CliOptions {
+func getCliOptionsParameters() *CliOptions {
 	dockerHubRepository := flag.String("docker-hub-repo", "", "DockHub repo to check tag versions")
 	helmChartPath := flag.String("helm-chart-path", ".", "Helm chart to check for updates")
 	failOnExistingUpdate := flag.Bool("fail-on-update", false, "Return exit code 1, if update is available")
@@ -27,7 +26,7 @@ func getCliOptions() CliOptions {
 
 	flag.Parse()
 
-	return CliOptions{
+	return &CliOptions{
 		dockerHubRepository:  dockerHubRepository,
 		helmChartPath:        helmChartPath,
 		failOnExistingUpdate: failOnExistingUpdate,
@@ -38,6 +37,19 @@ func getCliOptions() CliOptions {
 func main() {
 	cliOptions := getCliOptions()
 
+	dockerVersions := getDockerVersions(cliOptions)
+
+	chartVersion := getChartVersion(cliOptions)
+
+	_, err := checkVersion(chartVersion, dockerVersions, cliOptions)
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func getCliOptions() *CliOptions {
+	cliOptions := getCliOptionsParameters()
+
 	if *cliOptions.dockerHubRepository == "" {
 		log.Fatal(errors.New("parameter 'docker-hub-repo' is required"))
 	}
@@ -45,9 +57,17 @@ func main() {
 		log.Fatal(errors.New("parameter 'helm-chart-path' is required"))
 	}
 
+	return cliOptions
+}
+
+func getDockerVersions(cliOptions *CliOptions) []*semver.Version {
 	dockerHub := dockerhub.CreateDockerHub(*cliOptions.dockerHubRepository, *cliOptions.debug)
 	versions := dockerHub.GetVersions()
 
+	return versions
+}
+
+func getChartVersion(cliOptions *CliOptions) *semver.Version {
 	chart := chart2.NewChart(*cliOptions.helmChartPath)
 
 	appVersion := strings.Trim(chart.AppVersion(), "\"")
@@ -58,66 +78,47 @@ func main() {
 	if err != nil {
 		log.Fatal("Problem creating semver: ", err)
 	}
+	return v
+}
 
-	constraint, _ := semver.NewConstraint("<=" + v.String())
+func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version, cliOptions *CliOptions) (int, error) {
+	constraintStr := fmt.Sprintf("<= %s-0", chartVersion.String())
+	// See: https://github.com/Masterminds/semver?tab=readme-ov-file#working-with-prerelease-versions
+	constraint, _ := semver.NewConstraint(constraintStr)
 
 	newerVersions := make([]*semver.Version, 0)
 
-	for _, item := range versions {
+	fmt.Printf("Checking, if some version is > %s\n", chartVersion.String())
+	for _, item := range dockerVersions {
+		if *cliOptions.debug {
+			fmt.Printf("Checking if Helm chart version %v is > DockerHub version %v: ", chartVersion.String(), item.String())
+		}
 		if !constraint.Check(item) {
 			newerVersions = append(newerVersions, item)
+			if *cliOptions.debug {
+				fmt.Println(false)
+			}
+		} else {
+			if *cliOptions.debug {
+				fmt.Println(true)
+			}
 		}
 	}
 
-	if len(newerVersions) > 0 {
-		fmt.Println("Newer versions exists: ")
+	newerVersionsCnt := len(newerVersions)
+
+	if newerVersionsCnt > 0 {
+		fmt.Println("Newer dockerVersions exists: ")
 		for _, item := range newerVersions {
 			fmt.Println(item.Original())
 		}
 
 		if *cliOptions.failOnExistingUpdate {
-			os.Exit(1)
+			return newerVersionsCnt, fmt.Errorf("FAIL: Found %d new versions", newerVersionsCnt)
 		}
+	} else {
+		fmt.Println("No newer versions found.")
 	}
 
-	// Create a modified yaml file
-	//f, err := os.Create("/home/peter/Arbeit/GIT/GitHub/Helm-Charts/airsonic-advanced/Chart.yaml")
-	//if err != nil {
-	//	log.Fatalf("Problem creating file: %v", err)
-	//}
-	//defer f.Close()
-	//yamlEncoder := yaml.NewEncoder(f)
-	//yamlEncoder.SetIndent(2)
-	//yamlEncoder.Encode(dockerCompose.Content[0])
+	return newerVersionsCnt, nil
 }
-
-// Recusive function to find the child node by value that we care about.
-// Probably needs tweaking so use with caution.
-//func findChildNode(value string, node *yaml.Node) *yaml.Node {
-//	for _, v := range node.Content {
-//		// If we found the value we are looking for, return it.
-//		fmt.Printf("%+v", v)
-//		fmt.Println()
-//		if v.Value == value {
-//			return v
-//		}
-//		// Otherwise recursively look more
-//		if child := findChildNode(value, v); child != nil {
-//			return child
-//		}
-//	}
-//	return nil
-//}
-//
-//func getRequiredEnv(env string) (string, error) {
-//	value, exists := os.LookupEnv(env)
-//	if !exists {
-//		return "", fmt.Errorf("required environment variable '%s' is missing", env)
-//	}
-//
-//	if value == "" {
-//		return "", fmt.Errorf("required environment variable '%s' cannot be empty", env)
-//	}
-//
-//	return value, nil
-//}

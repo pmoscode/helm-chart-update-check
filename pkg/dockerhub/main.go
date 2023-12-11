@@ -58,9 +58,8 @@ type Results struct {
 }
 
 type DockerHub struct {
-	uri        string
-	repository string
-	debug      bool
+	uri   string
+	debug bool
 }
 
 func (hub *DockerHub) GetVersions() []*semver.Version {
@@ -132,9 +131,17 @@ func isVersionApplicable(version string) bool {
 
 func CreateDockerHub(repository string, debug bool) *DockerHub {
 	dockerHub := &DockerHub{
-		uri:        apiUri + repository + tagsPath,
-		repository: repository,
-		debug:      debug,
+		uri:   apiUri + repository + tagsPath,
+		debug: debug,
+	}
+
+	return dockerHub
+}
+
+func CreateDockerHubWithUri(uri string, debug bool) *DockerHub {
+	dockerHub := &DockerHub{
+		uri:   uri,
+		debug: debug,
 	}
 
 	return dockerHub
