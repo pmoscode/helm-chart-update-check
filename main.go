@@ -94,7 +94,7 @@ func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version
 	fmt.Printf("Checking, if some version is > %s\n", chartVersion.String())
 	for _, item := range dockerVersions {
 		if *cliOptions.debug {
-			fmt.Printf("Checking if Helm chart version %v is > DockerHub version %v: ", chartVersion.Original(), item.Original())
+			fmt.Printf("Checking if Helm chart version %v is >= DockerHub version %v: ", chartVersion.Original(), item.Original())
 		}
 		if !constraint.Check(item) {
 			newerVersions = append(newerVersions, item)
