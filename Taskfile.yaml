@@ -17,3 +17,7 @@ tasks:
     desc: Run go test
     cmds:
       - go test ./... -v
+
+  update-deps:
+    desc: Update go dependencies
+    cmd: go get -u
