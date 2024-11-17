@@ -12,7 +12,7 @@ Usage of hcuc:
   --docker-hub-repo string
         DockHub repo to check tag versions
   --exclude-versions string
-        Versions to exclude from check
+        Versions to exclude from check  (on multiple versions: separated by comma)
   --fail-on-update
         Return exit code 1, if update is available
   --helm-chart-path string
@@ -25,3 +25,4 @@ Per default, it shows a small table with the current version and all available v
 When `--fail-on-update` is set, the app is exiting with code 1.
 
 `--exclude-versions` can be set, to ignore / exclude version on DockerHub from the check.
+You can specify multiple versions and/or use ranges (^,~).
