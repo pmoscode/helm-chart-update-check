@@ -18,6 +18,6 @@ tasks:
     cmds:
       - go test ./... -v
 
-  update-deps:
+  upgrade:
     desc: Update go dependencies
     cmd: go get -u
