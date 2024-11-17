@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"github.com/Masterminds/semver/v3"
+	"github.com/pmoscode/helm-chart-update-check/pkg/cli"
 	"github.com/pmoscode/helm-chart-update-check/pkg/dockerhub"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 )
 
@@ -17,38 +16,29 @@ type Tests struct {
 	expectedResult []string
 }
 
-func TestGetDockerVersions(t *testing.T) {
-	tests := []Tests{
-		{
-			name: "one",
-			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write(getTestData())
-			})),
-			expectedResult: []string{"1.2.3", "1.2.3", "1.2.3-pre.1", "1.2.3-dev", "1.5.0-rc", "1.5.0-rc1", "1.5.0", "1.5.0-nightly.1"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			defer test.server.Close()
-
-			hub := dockerhub.CreateDockerHubWithUri(test.server.URL, false)
-			versions := hub.GetVersions()
-
-			if !reflect.DeepEqual(convertSemverToStringArray(versions), test.expectedResult) {
-				t.Errorf("FAILED: expected %v, got %v\n", test.expectedResult, versions)
-			}
-		})
-	}
+func TestCheckVersionNormal(t *testing.T) {
+	innerTest(t, "")
 }
 
-func TestCheckVersion(t *testing.T) {
+func TestCheckVersionWithExcludesSimple(t *testing.T) {
+	innerTest(t, "1.2.3")
+}
+
+func TestCheckVersionWithExcludesRangeMajor(t *testing.T) {
+	innerTest(t, "^1.0.0-0")
+}
+
+func TestCheckVersionWithExcludesRangeMinor(t *testing.T) {
+	innerTest(t, "~3.3.0-0")
+}
+
+func innerTest(t *testing.T, excludeVersions string) {
 	debug := true
 	fail := false
-	cliOptions := &CliOptions{
-		debug:                &debug,
-		failOnExistingUpdate: &fail,
+	cliOptions := &cli.Options{
+		Debug:                &debug,
+		FailOnExistingUpdate: &fail,
+		ExcludeVersions:      &excludeVersions,
 	}
 
 	test := Tests{
@@ -61,25 +51,15 @@ func TestCheckVersion(t *testing.T) {
 
 	defer test.server.Close()
 
-	hub := dockerhub.CreateDockerHubWithUri(test.server.URL, *cliOptions.debug)
+	hub := dockerhub.CreateDockerHubWithUri(test.server.URL, *cliOptions.Debug)
 	dockerVersions := hub.GetVersions()
 
 	chartVersion, _ := semver.NewVersion("v1.5.0")
 
 	_, err := checkVersion(chartVersion, dockerVersions, cliOptions)
 	if err != nil {
-		log.Fatalln(err)
+		t.Fatalf("Expected no error, got %v", err)
 	}
-}
-
-func convertSemverToStringArray(semverVersions []*semver.Version) []string {
-	versions := make([]string, len(semverVersions))
-
-	for idx, item := range semverVersions {
-		versions[idx] = item.String()
-	}
-
-	return versions
 }
 
 func getTestData() []byte {
@@ -108,6 +88,15 @@ func getTestData() []byte {
 			},
 			{
 				Name: "v1.5.0-nightly.1",
+			},
+			{
+				Name: "v2.2.0",
+			},
+			{
+				Name: "v3.2.1",
+			},
+			{
+				Name: "v3.3.4",
 			},
 		},
 	}

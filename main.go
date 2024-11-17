@@ -1,45 +1,23 @@
 package main
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
+	"github.com/pmoscode/go-common/shutdown"
 	chart2 "github.com/pmoscode/helm-chart-update-check/pkg/chart"
+	"github.com/pmoscode/helm-chart-update-check/pkg/cli"
 	"github.com/pmoscode/helm-chart-update-check/pkg/dockerhub"
+	"github.com/pmoscode/helm-chart-update-check/pkg/utils"
 	"log"
-	"strings"
 )
 
-type CliOptions struct {
-	dockerHubRepository  *string
-	helmChartPath        *string
-	failOnExistingUpdate *bool
-	debug                *bool
-}
-
-func getCliOptionsParameters() *CliOptions {
-	dockerHubRepository := flag.String("docker-hub-repo", "", "DockHub repo to check tag versions")
-	helmChartPath := flag.String("helm-chart-path", ".", "Helm chart to check for updates")
-	failOnExistingUpdate := flag.Bool("fail-on-update", false, "Return exit code 1, if update is available")
-	debug := flag.Bool("debug", false, "Enable debug outputs")
-
-	flag.Parse()
-
-	return &CliOptions{
-		dockerHubRepository:  dockerHubRepository,
-		helmChartPath:        helmChartPath,
-		failOnExistingUpdate: failOnExistingUpdate,
-		debug:                debug,
-	}
-}
-
 func main() {
-	cliOptions := getCliOptions()
+	defer shutdown.ExitOnPanic()
 
-	dockerVersions := getDockerVersions(cliOptions)
+	cliOptions := cli.GetCliOptions()
 
-	chartVersion := getChartVersion(cliOptions)
+	dockerVersions := dockerhub.FetchDockerVersions(cliOptions)
+	chartVersion := chart2.FetchChartVersion(cliOptions)
 
 	_, err := checkVersion(chartVersion, dockerVersions, cliOptions)
 	if err != nil {
@@ -47,64 +25,50 @@ func main() {
 	}
 }
 
-func getCliOptions() *CliOptions {
-	cliOptions := getCliOptionsParameters()
-
-	if *cliOptions.dockerHubRepository == "" {
-		log.Fatal(errors.New("parameter 'docker-hub-repo' is required"))
-	}
-	if *cliOptions.helmChartPath == "" {
-		log.Fatal(errors.New("parameter 'helm-chart-path' is required"))
-	}
-
-	return cliOptions
-}
-
-func getDockerVersions(cliOptions *CliOptions) []*semver.Version {
-	dockerHub := dockerhub.CreateDockerHub(*cliOptions.dockerHubRepository, *cliOptions.debug)
-	versions := dockerHub.GetVersions()
-
-	return versions
-}
-
-func getChartVersion(cliOptions *CliOptions) *semver.Version {
-	chart := chart2.NewChart(*cliOptions.helmChartPath)
-
-	appVersion := strings.Trim(chart.AppVersion(), "\"")
-	fmt.Println("Helm chart AppVersion:")
-	fmt.Println(appVersion)
-
-	v, err := semver.NewVersion(appVersion)
-	if err != nil {
-		log.Fatal("Problem creating semver: ", err)
-	}
-	return v
-}
-
-func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version, cliOptions *CliOptions) (int, error) {
-	constraintStr := fmt.Sprintf("<= %s-0", chartVersion.IncPatch().String())
+func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version, cliOptions *cli.Options) (int, error) {
 	// See: https://github.com/Masterminds/semver?tab=readme-ov-file#working-with-prerelease-versions
-	constraint, err := semver.NewConstraint(constraintStr)
+	constraint, err := semver.NewConstraint(fmt.Sprintf("<= %s-0", chartVersion.IncPatch().String()))
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	newerVersions := make([]*semver.Version, 0)
+	excludeVersions := utils.GetExcludedVersionsSimple(*cliOptions.ExcludeVersions)
 
 	fmt.Printf("Checking, if some version is > %s\n", chartVersion.String())
 	for _, item := range dockerVersions {
-		if *cliOptions.debug {
+		if *cliOptions.Debug {
 			fmt.Printf("Checking if Helm chart version %v is >= DockerHub version %v: ", chartVersion.Original(), item.Original())
 		}
-		if !constraint.Check(item) {
-			newerVersions = append(newerVersions, item)
-			if *cliOptions.debug {
-				fmt.Println(false)
+
+		skipVersion := false
+		if excludeVersions != nil {
+			for _, version := range excludeVersions {
+				constraintExclude, err := semver.NewConstraint(fmt.Sprintf("%s", version))
+				if err != nil {
+					log.Fatalln(err)
+				}
+
+				if constraintExclude.Check(item) {
+					skipVersion = true
+					break
+				}
+			}
+		}
+
+		if !skipVersion {
+			if !constraint.Check(item) {
+				newerVersions = append(newerVersions, item)
+				if *cliOptions.Debug {
+					fmt.Println(false)
+				}
+			} else {
+				if *cliOptions.Debug {
+					fmt.Println(true)
+				}
 			}
 		} else {
-			if *cliOptions.debug {
-				fmt.Println(true)
-			}
+			fmt.Println("skipped")
 		}
 	}
 
@@ -116,7 +80,7 @@ func checkVersion(chartVersion *semver.Version, dockerVersions []*semver.Version
 			fmt.Println(item.Original())
 		}
 
-		if *cliOptions.failOnExistingUpdate {
+		if *cliOptions.FailOnExistingUpdate {
 			return newerVersionsCnt, fmt.Errorf("FAIL: Found %d new versions", newerVersionsCnt)
 		}
 	} else {

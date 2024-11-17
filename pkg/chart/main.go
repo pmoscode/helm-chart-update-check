@@ -1,47 +1,14 @@
 package chart
 
 import (
+	"fmt"
+	"github.com/Masterminds/semver/v3"
+	"github.com/pmoscode/helm-chart-update-check/pkg/cli"
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"strings"
 )
-
-type Chart struct {
-	chartPath string
-	root      *yaml.Node
-}
-
-func (c *Chart) Version() string {
-	return strings.TrimSpace(c.searchNode("version"))
-}
-
-func (c *Chart) AppVersion() string {
-	return strings.TrimSpace(c.searchNode("appVersion"))
-}
-
-func (c *Chart) UpdateAppVersion() {
-
-}
-
-func (c *Chart) searchNode(nodeName string) string {
-	//var keyNode *yaml.Node
-	var valNode *yaml.Node
-
-	for i := 0; i < len(c.root.Content); i += 2 {
-		node := c.root.Content[i]
-		if node.Kind == yaml.ScalarNode && node.Value == nodeName {
-			//keyNode = c.root.Content[i]
-			valNode = c.root.Content[i+1]
-		}
-	}
-
-	//locationSectionKey, _ := yaml.Marshal(keyNode)
-	//fmt.Println(string(locationSectionKey))
-	locationSectionVal, _ := yaml.Marshal(valNode)
-
-	return string(locationSectionVal)
-}
 
 func NewChart(chartPath string) *Chart {
 	b, err := os.ReadFile(chartPath + "/Chart.yaml")
@@ -63,4 +30,18 @@ func NewChart(chartPath string) *Chart {
 	chart.root = document.Content[0]
 
 	return chart
+}
+
+func FetchChartVersion(cliOptions *cli.Options) *semver.Version {
+	chart := NewChart(*cliOptions.HelmChartPath)
+
+	appVersion := strings.Trim(chart.AppVersion(), "\"")
+	fmt.Println("Helm chart AppVersion:")
+	fmt.Println(appVersion)
+
+	v, err := semver.NewVersion(appVersion)
+	if err != nil {
+		log.Fatal("Problem creating semver: ", err)
+	}
+	return v
 }
