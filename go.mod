@@ -1,6 +1,6 @@
 module github.com/pmoscode/helm-chart-update-check
 
-go 1.24.0 // Update GH Action aswell
+go 1.24.2 // Update GH Action aswell
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
