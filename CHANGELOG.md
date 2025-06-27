@@ -8,13 +8,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 <!-- insertion marker -->
 ## Unreleased
 
-<small>[Compare with latest](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.2...HEAD)</small>
+<small>[Compare with latest](https://github.com/pmoscode/helm-chart-update-check/compare/v0.2.0...HEAD)</small>
+
+### Features
+
+- update semver library to v3.4.0 ([a6f5f09](https://github.com/pmoscode/helm-chart-update-check/commit/a6f5f0949b260c17a7bc1966ceebca4870b37c1c) by Peter Motzko).
+
+<!-- insertion marker -->
+## [v0.2.0](https://github.com/pmoscode/helm-chart-update-check/releases/tag/v0.2.0) - 2024-11-17
+
+<small>[Compare with v0.1.3](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.3...v0.2.0)</small>
+
+### Features
+
+- add "exclude-versions" flag and do small code refactor ([7a66347](https://github.com/pmoscode/helm-chart-update-check/commit/7a66347b308355a7021dcad1a21493fa18e0adc7) by Peter Motzko).
+- add dependency version update ([ca97c70](https://github.com/pmoscode/helm-chart-update-check/commit/ca97c70c13f94524408a664a6d0a8dcf5da5f662) by Peter Motzko).
 
 ### Bug Fixes
 
-- increase patch version to get correct check ([cb55865](https://github.com/pmoscode/helm-chart-update-check/commit/cb558657a5d805584fabf3f9081acca43ce86794) by Peter Motzko).
+- update module github.com/masterminds/semver/v3 to v3.3.0 ([7cafed9](https://github.com/pmoscode/helm-chart-update-check/commit/7cafed92010a43b099d6ada8817e00eb35f4e596) by renovate[bot]).
 
-<!-- insertion marker -->
+## [v0.1.3](https://github.com/pmoscode/helm-chart-update-check/releases/tag/v0.1.3) - 2023-12-11
+
+<small>[Compare with v0.1.2](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.2...v0.1.3)</small>
+
+### Bug Fixes
+
+- increase patch version to get correct check ([69f9912](https://github.com/pmoscode/helm-chart-update-check/commit/69f9912be734f546d6ca4cfb9438c5ba98ff7723) by Peter Motzko).
+
 ## [v0.1.2](https://github.com/pmoscode/helm-chart-update-check/releases/tag/v0.1.2) - 2023-12-11
 
 <small>[Compare with v0.1.1](https://github.com/pmoscode/helm-chart-update-check/compare/v0.1.1...v0.1.2)</small>
