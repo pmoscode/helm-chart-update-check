@@ -5,6 +5,53 @@ import (
 	"testing"
 )
 
+func TestGetExcludedVersionsEmpty(t *testing.T) {
+	result, err := GetExcludedVersions("")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Errorf("expected nil, got %v", result)
+	}
+}
+
+func TestGetExcludedVersionsInvalidVersion(t *testing.T) {
+	_, err := GetExcludedVersions("not-a-semver")
+	if err == nil {
+		t.Fatal("expected error for invalid version, got nil")
+	}
+}
+
+func TestGetExcludedVersionsSimpleEmpty(t *testing.T) {
+	result := GetExcludedVersionsSimple("")
+	if result != nil {
+		t.Errorf("expected nil, got %v", result)
+	}
+}
+
+func TestGetExcludedVersionsSimpleSingle(t *testing.T) {
+	result := GetExcludedVersionsSimple("1.2.3")
+	if len(result) != 1 {
+		t.Fatalf("expected 1 element, got %d", len(result))
+	}
+	if result[0] != "1.2.3" {
+		t.Errorf("expected '1.2.3', got %q", result[0])
+	}
+}
+
+func TestGetExcludedVersionsSimpleMultiple(t *testing.T) {
+	result := GetExcludedVersionsSimple("1.2.3,^2.0.0,~3.0.0-0")
+	if len(result) != 3 {
+		t.Fatalf("expected 3 elements, got %d", len(result))
+	}
+	expected := []string{"1.2.3", "^2.0.0", "~3.0.0-0"}
+	for i, v := range expected {
+		if result[i] != v {
+			t.Errorf("element %d: expected %q, got %q", i, v, result[i])
+		}
+	}
+}
+
 func TestGetExcludedVersionsSimple(t *testing.T) {
 	versionStr := "1.2.3"
 	versionSemver := semver.New(1, 2, 3, "", "")

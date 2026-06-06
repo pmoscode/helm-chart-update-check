@@ -4,6 +4,31 @@ import (
 	"testing"
 )
 
+func TestIsVersionApplicable(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected bool
+	}{
+		{"latest", false},
+		{"1", false},
+		{"1.2", false},
+		{"1.2.3", true},
+		{"v1.2.3", true},
+		{"1.2.3-rc1", true},
+		{"1.2.3-nightly.1", true},
+		{"1.2.3.4", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			got := isVersionApplicable(tt.version)
+			if got != tt.expected {
+				t.Errorf("isVersionApplicable(%q) = %v, want %v", tt.version, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestMapToSemver(t *testing.T) {
 	var skipResults = []Results{
 		{

@@ -62,6 +62,90 @@ func innerTest(t *testing.T, excludeVersions string) {
 	}
 }
 
+func TestCheckVersionFailOnExistingUpdate(t *testing.T) {
+	debug := false
+	fail := true
+	excludeVersions := ""
+	cliOptions := &cli.Options{
+		Debug:                &debug,
+		FailOnExistingUpdate: &fail,
+		ExcludeVersions:      &excludeVersions,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(getTestData())
+	}))
+	defer server.Close()
+
+	hub := dockerhub.CreateDockerHubWithUri(server.URL, false)
+	dockerVersions := hub.GetVersions()
+	chartVersion, _ := semver.NewVersion("v1.5.0")
+
+	_, err := checkVersion(chartVersion, dockerVersions, cliOptions)
+	if err == nil {
+		t.Fatal("expected error due to FailOnExistingUpdate, got nil")
+	}
+}
+
+func TestCheckVersionNoNewerVersions(t *testing.T) {
+	debug := false
+	fail := false
+	excludeVersions := ""
+	cliOptions := &cli.Options{
+		Debug:                &debug,
+		FailOnExistingUpdate: &fail,
+		ExcludeVersions:      &excludeVersions,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(getTestData())
+	}))
+	defer server.Close()
+
+	hub := dockerhub.CreateDockerHubWithUri(server.URL, false)
+	dockerVersions := hub.GetVersions()
+	chartVersion, _ := semver.NewVersion("v4.0.0")
+
+	count, err := checkVersion(chartVersion, dockerVersions, cliOptions)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected count 0, got %d", count)
+	}
+}
+
+func TestCheckVersionReturnsCount(t *testing.T) {
+	debug := false
+	fail := false
+	excludeVersions := ""
+	cliOptions := &cli.Options{
+		Debug:                &debug,
+		FailOnExistingUpdate: &fail,
+		ExcludeVersions:      &excludeVersions,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(getTestData())
+	}))
+	defer server.Close()
+
+	hub := dockerhub.CreateDockerHubWithUri(server.URL, false)
+	dockerVersions := hub.GetVersions()
+	chartVersion, _ := semver.NewVersion("v1.5.0")
+
+	count, err := checkVersion(chartVersion, dockerVersions, cliOptions)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if count != 3 {
+		t.Errorf("expected count 3 (v2.2.0, v3.2.1, v3.3.4), got %d", count)
+	}
+}
+
 func getTestData() []byte {
 	var serverResponseBody = &dockerhub.ResponseBody{
 		Results: []dockerhub.Results{
